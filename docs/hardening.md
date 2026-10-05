@@ -23,15 +23,20 @@ Then in `/etc/ssh/sshd_config`:
 
 ```
 PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
 ```
 
 ```bash
-systemctl restart sshd
+sshd -t
+systemctl reload ssh
 ```
 
 > **Order matters.** Confirm key authentication works before disabling password
 > login, or you will lock yourself out of your own machine. Keep a second session
-> open while making this change.
+> open while making this change. On Debian/Proxmox the unit is normally `ssh`;
+> confirm the unit name on other distributions. Inspect effective settings with
+> `sshd -T`, including relevant `Match` blocks, and verify a fresh login after reload.
 
 ## 2. Firewall policy
 
@@ -79,8 +84,10 @@ Service secrets live in a single root-owned file, `chmod 600`, on the host —
 outside any container mount and outside version control. Nothing sensitive is in
 a Compose file that could end up committed.
 
-The master password for the vault is not written down anywhere. That is the
-point of a master password.
+Keep an offline recovery kit in a physically secure location, separate from
+the encrypted vault backup. Include the recovery codes and the information needed
+to restore access. A password manager cannot recover a forgotten master password
+from its encrypted database. Test recovery without exposing the real secret.
 
 ## 7. Power protection
 
@@ -94,9 +101,8 @@ insurance in the entire build.
 
 ## 8. Patching
 
-Weekly `apt update && apt upgrade` across host and every guest. Unpatched
-software is the most common real-world attack vector by a wide margin, and a lab
-is a bad place to practise bad habits.
+Weekly `apt update && apt upgrade` across host and every guest. Review release notes and take verified backups before major upgrades. Validate
+service health after patching and keep a tested rollback path.
 
 ## Deliberately not done
 
@@ -109,3 +115,7 @@ Honest list of what is missing:
   from personal devices is the next meaningful hardening step.
 - **No off-site backups.** Backups were local-only pending an external drive.
   A local-only backup does not survive theft, fire, or flood.
+
+## References
+
+- [OpenSSH server configuration](https://man.openbsd.org/sshd_config.5)
